@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Will My Train Be Late? — Architecture",
+    "output": "docs/architecture/will-my-train-be-late.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "odpt",
+      "type": "external",
+      "label": "ODPT API",
+      "sublabel": "Metro + Toei (+ JR)",
+      "pos": [
+        40,
+        110
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "meteo",
+      "type": "external",
+      "label": "Open-Meteo",
+      "sublabel": "Tokyo weather",
+      "pos": [
+        40,
+        260
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "ci",
+      "type": "external",
+      "label": "GitHub Actions",
+      "sublabel": "CI/CD",
+      "pos": [
+        250,
+        40
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "poller",
+      "type": "backend",
+      "label": "Poller",
+      "sublabel": "Python pod, always on",
+      "pos": [
+        250,
+        180
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "pubsub",
+      "type": "messagebus",
+      "label": "Pub/Sub",
+      "sublabel": "rail / weather / chat",
+      "pos": [
+        500,
+        180
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "bronze",
+      "type": "database",
+      "label": "BigQuery bronze",
+      "sublabel": "raw JSON events",
+      "pos": [
+        780,
+        180
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "gold",
+      "type": "database",
+      "label": "BigQuery gold",
+      "sublabel": "silver + gold models",
+      "pos": [
+        1060,
+        180
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "scheduler",
+      "type": "cloud",
+      "label": "Cloud Scheduler",
+      "sublabel": "cron trigger",
+      "pos": [
+        780,
+        40
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "dbt",
+      "type": "backend",
+      "label": "dbt job",
+      "sublabel": "Cloud Run Job",
+      "pos": [
+        1060,
+        40
+      ],
+      "size": [
+        140,
+        60
+      ],
+      "tag": "+ Elementary"
+    },
+    {
+      "id": "bqml",
+      "type": "backend",
+      "label": "BigQuery ML",
+      "sublabel": "delay model",
+      "pos": [
+        1300,
+        330
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "looker",
+      "type": "frontend",
+      "label": "Looker Studio",
+      "sublabel": "rail public, rest private",
+      "pos": [
+        1300,
+        180
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "visitor",
+      "type": "frontend",
+      "label": "Chat page",
+      "sublabel": "ernestau.com (Astro)",
+      "pos": [
+        40,
+        480
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "chatapi",
+      "type": "backend",
+      "label": "Chat API",
+      "sublabel": "FastAPI on Cloud Run",
+      "pos": [
+        500,
+        480
+      ],
+      "size": [
+        140,
+        64
+      ],
+      "tag": "rate-limited"
+    },
+    {
+      "id": "gemini",
+      "type": "cloud",
+      "label": "Gemini",
+      "sublabel": "Vertex AI",
+      "pos": [
+        500,
+        640
+      ],
+      "size": [
+        140,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "GCP · asia-northeast1 · all Terraform",
+      "wraps": [
+        "poller",
+        "pubsub",
+        "bronze",
+        "gold",
+        "scheduler",
+        "dbt",
+        "bqml",
+        "chatapi"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "GKE cluster",
+      "wraps": [
+        "poller"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "poll-odpt",
+      "from": "odpt",
+      "to": "poller",
+      "label": "poll ~60s"
+    },
+    {
+      "id": "poll-meteo",
+      "from": "meteo",
+      "to": "poller",
+      "label": "poll"
+    },
+    {
+      "id": "helm-deploy",
+      "from": "ci",
+      "to": "poller",
+      "label": "Helm deploy",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "publish",
+      "from": "poller",
+      "to": "pubsub",
+      "label": "publish",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bq-sub",
+      "from": "pubsub",
+      "to": "bronze",
+      "label": "BQ subscription",
+      "variant": "emphasis"
+    },
+    {
+      "id": "dbt-build",
+      "from": "bronze",
+      "to": "gold",
+      "label": "dbt build",
+      "variant": "emphasis"
+    },
+    {
+      "id": "schedule",
+      "from": "scheduler",
+      "to": "dbt",
+      "label": "every 15 min"
+    },
+    {
+      "id": "dbt-runs",
+      "from": "dbt",
+      "to": "gold",
+      "label": "builds",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "train",
+      "from": "gold",
+      "to": "bqml",
+      "label": "train / predict"
+    },
+    {
+      "id": "dashboards",
+      "from": "gold",
+      "to": "looker",
+      "label": "dashboards"
+    },
+    {
+      "id": "ask",
+      "from": "visitor",
+      "to": "chatapi",
+      "label": "question (EN/JA)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "llm",
+      "from": "chatapi",
+      "to": "gemini",
+      "label": "write SQL + answer",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "sql",
+      "from": "chatapi",
+      "to": "gold",
+      "label": "read-only SQL",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "chat-events",
+      "from": "chatapi",
+      "to": "pubsub",
+      "label": "chat events",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Streaming in",
+      "items": [
+        "Poller on GKE fetches live status + weather",
+        "Pub/Sub writes raw events straight to BigQuery (no Dataflow)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Warehouse",
+      "items": [
+        "dbt turns bronze into silver + gold on a schedule",
+        "dbt tests + Elementary report data health",
+        "BigQuery ML predicts line disruptions"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Chatbot",
+      "items": [
+        "Static page on ernestau.com calls a Cloud Run API",
+        "Gemini writes SQL; only SELECT on gold is allowed",
+        "Every question is logged back through Pub/Sub"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Platform",
+      "items": [
+        "Everything provisioned with Terraform",
+        "GitHub Actions: test, build images, deploy",
+        "Budget alert at $10/month"
+      ]
+    }
+  ]
+}

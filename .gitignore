@@ -1,0 +1,32 @@
+# secrets & local env
+.env
+*.tfvars
+!example.tfvars
+
+# python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# notebooks
+.ipynb_checkpoints/
+
+# never commit personal documents
+*.pdf
+*.docx
+
+# local tooling
+.superpowers/
+.archify/
+.DS_Store
+
+# Private working notes (design spec, build plans)
+docs/superpowers/
